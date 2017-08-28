@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
+import warnings
+
 import pika
 
 
@@ -14,7 +16,9 @@ class QueueManager(object):
         self.logger.debug("connection parameters %s:%s", connection_parameters.get('host'),
                           connection_parameters.get('port'))
         self.connection_parameters = connection_parameters
-        self.queue_args = queue_args
+        if queue_args:
+            self.logger.warning("Deprecated parameter queue_args")
+            warnings.warn("Deprecated parameter queue_args", DeprecationWarning)
 
     def __connect(self):
         credentials = pika.PlainCredentials(
@@ -28,23 +32,23 @@ class QueueManager(object):
             credentials=credentials)
         self.connection = pika.BlockingConnection(parameters)
 
-    def __get_channel(self, queue_name=None):
+    def __get_channel(self, queue_name=None, queue_args=None):
         if not self.connection:
             self.__connect()
         self.logger.debug("getting channel")
         channel = self.connection.channel()
 
         if queue_name:
-            if self.queue_args:
+            if queue_args:
                 self.logger.debug('Declare queue %s',
-                                  channel.queue_declare(queue=queue_name, arguments=self.queue_args))
+                                  channel.queue_declare(queue=queue_name, arguments=queue_args))
             else:
                 self.logger.debug('Declare queue %s', channel.queue_declare(queue=queue_name))
 
         return channel
 
-    def push(self, queue_name, body, pika_properties=None):
-        channel = self.__get_channel(queue_name)
+    def push(self, queue_name, body, queue_args=None, pika_properties=None):
+        channel = self.__get_channel(queue_name, queue_args)
         self.logger.debug("pushing %s to queue %s", body, queue_name)
         ret = channel.basic_publish(
             exchange='',
@@ -56,8 +60,8 @@ class QueueManager(object):
         self.__disconnect()
         return ret
 
-    def pop(self, queue_name):
-        channel = self.__get_channel(queue_name)
+    def pop(self, queue_name, queue_args=None):
+        channel = self.__get_channel(queue_name, queue_args)
         self.logger.debug("pop from queue %s", queue_name)
 
         method_frame, header_frame, body = channel.basic_get(queue=queue_name)
@@ -68,6 +72,11 @@ class QueueManager(object):
 
         self.__disconnect()
         return body
+
+    def ping(self):
+        if not self.connection:
+            self.__connect()
+        return self.connection.is_open
 
     def __disconnect(self):
         if self.connection:
