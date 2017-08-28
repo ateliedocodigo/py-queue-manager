@@ -9,7 +9,7 @@ Usage
 QueueManager class
 ..................
 
-::python
+.. code:: python
 
     from queue_manager import QueueManager
 
@@ -30,7 +30,7 @@ RabbitMqPublisher class
 
 Inspired on: asynchronous_publisher_example_
 
-::python
+.. code:: python
 
     from queue_manager import RabbitMqPublisher
 
@@ -51,7 +51,7 @@ This class is an async consumer class, that still connected.
 
 Inspired on: asynchronous_consumer_example_
 
-::python
+.. code:: python
 
     consumer = RabbitMqConsumer('amqp://username:password@hostname:port', queue='queue_name')
 
