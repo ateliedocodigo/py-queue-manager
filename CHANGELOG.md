@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-Next Release
+1.1.0
 -----
 
 * Add ping to QueueManager
