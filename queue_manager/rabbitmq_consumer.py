@@ -7,14 +7,16 @@ import pika
 
 class RabbitMqConsumer(object):
 
-    def __init__(self, amqp_url, queue):
+    def __init__(self, amqp_url, exchange=None, exchange_type=None, queue=None, routing_key=None):
         self._connection = None
         self._channel = None
         self._closing = False
-        self._stopping = False
         self._consumer_tag = None
         self._url = amqp_url
+        self.exchange = exchange
+        self.exchange_type = exchange_type
         self.queue = queue
+        self.routing_key = routing_key
         self.logger = logging.getLogger(self.__module__)
 
     def connect(self):
@@ -57,7 +59,7 @@ class RabbitMqConsumer(object):
         self.logger.info('Channel opened')
         self._channel = channel
         self.add_on_channel_close_callback()
-        self.on_bindok(None)
+        self.setup_exchange()
 
     def add_on_channel_close_callback(self):
         self.logger.info('Adding channel close callback')
@@ -68,6 +70,31 @@ class RabbitMqConsumer(object):
         if not self._closing:
             self._connection.close()
 
+    def setup_exchange(self):
+        if self.exchange:
+            self.logger.info('Declaring exchange %s', self.exchange)
+            self._channel.exchange_declare(self.on_exchange_declareok, self.exchange, self.exchange_type)
+            return
+        self.on_exchange_declareok(None)
+
+    def on_exchange_declareok(self, unused_frame):
+        self.logger.info('Exchange declared')
+        self.setup_queue()
+
+    def setup_queue(self):
+        if self.queue:
+            self.logger.info('Declaring queue %s', self.queue)
+            self._channel.queue_declare(self.on_queue_declareok, self.queue)
+            return
+        self.on_queue_declareok(None)
+
+    def on_queue_declareok(self, method_frame):
+        if self.exchange:
+            self.logger.info('Binding %s to %s with %s', self.exchange, self.queue, self.routing_key)
+            self._channel.queue_bind(self.on_bindok, self.queue, self.exchange, self.routing_key)
+            return
+        self.on_bindok(None)
+
     def on_bindok(self, unused_frame):
         self.logger.info('Queue bound')
         self.start_consuming()
@@ -75,6 +102,7 @@ class RabbitMqConsumer(object):
     def start_consuming(self):
         self.logger.info('Issuing consumer related RPC commands')
         self.add_on_cancel_callback()
+        self._channel.basic_qos(prefetch_count=1)
         self._consumer_tag = self._channel.basic_consume(self.on_message, self.queue)
 
     def add_on_cancel_callback(self):
@@ -87,8 +115,8 @@ class RabbitMqConsumer(object):
             self._channel.close()
 
     def on_message(self, unused_channel, basic_deliver, properties, body):
-        self.acknowledge_message(basic_deliver.delivery_tag)
         self.callback(body)
+        self.acknowledge_message(basic_deliver.delivery_tag)
 
     def acknowledge_message(self, delivery_tag):
         self._channel.basic_ack(delivery_tag)
@@ -106,7 +134,7 @@ class RabbitMqConsumer(object):
         self.logger.info('Closing the channel')
         self._channel.close()
 
-    def run(self, callback):
+    def run(self, callback=print):
         self.callback = callback
 
         self._connection = self.connect()
@@ -114,9 +142,8 @@ class RabbitMqConsumer(object):
 
     def stop(self):
         self.logger.info('Stopping')
-        self._stopping = True
+        self._closing = True
         self.stop_consuming()
-        self.close_connection()
         self._connection.ioloop.start()
         self.logger.info('Stopped')
 
