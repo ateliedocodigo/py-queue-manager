@@ -6,8 +6,11 @@ import pika
 
 
 class RabbitMqConsumer(object):
+    def __init__(self, amqp_url,
+                 exchange=None, exchange_type=None,
+                 queue=None, queue_properties=None,
+                 routing_key=None):
 
-    def __init__(self, amqp_url, exchange=None, exchange_type=None, queue=None, routing_key=None):
         self._connection = None
         self._channel = None
         self._closing = False
@@ -16,6 +19,7 @@ class RabbitMqConsumer(object):
         self.exchange = exchange
         self.exchange_type = exchange_type
         self.queue = queue
+        self.queue_properties = queue_properties
         self.routing_key = routing_key
         self.logger = logging.getLogger(self.__module__)
 
@@ -84,7 +88,8 @@ class RabbitMqConsumer(object):
     def setup_queue(self):
         if self.queue:
             self.logger.info('Declaring queue %s', self.queue)
-            self._channel.queue_declare(self.on_queue_declareok, self.queue)
+            self._channel.queue_declare(self.on_queue_declareok, self.queue, arguments=self.queue_properties)
+
             return
         self.on_queue_declareok(None)
 
