@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-Next Release
+1.2.0
 -----
 
 * Add exchange support on `RabbitMqConsumer`
