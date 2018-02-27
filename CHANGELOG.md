@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+Next Release
+-----
+
+* Add dynamic queue declaration on consume exchange
+* Add reject message on exception
+
 1.2.0
 -----
 
