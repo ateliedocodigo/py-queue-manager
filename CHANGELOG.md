@@ -4,6 +4,12 @@ CHANGELOG
 1.3.0
 -----
 
+* Add dynamic queue declaration on consume exchange
+* Add reject message on exception
+
+1.2.0
+-----
+
 * Add exchange support on `RabbitMqConsumer`
 
 1.1.0
