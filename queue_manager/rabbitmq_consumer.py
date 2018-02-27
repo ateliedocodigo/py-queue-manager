@@ -91,10 +91,16 @@ class RabbitMqConsumer(object):
             self._channel.queue_declare(self.on_queue_declareok, self.queue, arguments=self.queue_properties)
 
             return
+        if self.exchange:
+            self._channel.queue_declare(self.on_queue_declareok, arguments=self.queue_properties, exclusive=True)
+            return
+
         self.on_queue_declareok(None)
 
     def on_queue_declareok(self, method_frame):
         if self.exchange:
+            if not self.queue:
+                self.queue = method_frame.method.queue
             self.logger.info('Binding %s to %s with %s', self.exchange, self.queue, self.routing_key)
             self._channel.queue_bind(self.on_bindok, self.queue, self.exchange, self.routing_key)
             return
@@ -120,8 +126,18 @@ class RabbitMqConsumer(object):
             self._channel.close()
 
     def on_message(self, unused_channel, basic_deliver, properties, body):
-        self.callback(body)
-        self.acknowledge_message(basic_deliver.delivery_tag)
+        try:
+            self.callback(body)
+            self.acknowledge_message(basic_deliver.delivery_tag)
+        except (KeyboardInterrupt, SystemExit) as e:
+            self.reject_message(basic_deliver.delivery_tag)
+            raise e
+        except Exception as e:
+            self.logger.error(e, exc_info=True)
+            self.reject_message(basic_deliver.delivery_tag)
+
+    def reject_message(self, delivery_tag):
+        self._channel.basic_reject(delivery_tag)
 
     def acknowledge_message(self, delivery_tag):
         self._channel.basic_ack(delivery_tag)
