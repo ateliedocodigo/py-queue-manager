@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-Next Release
+1.3.0
 -----
 
 * Add dynamic queue declaration on consume exchange
