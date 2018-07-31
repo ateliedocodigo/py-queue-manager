@@ -9,6 +9,7 @@ __repo__ = "https://github.com/ateliedocodigo/py-queue-manager"
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
+
 setup(
     name="py-queue-manager",
     version=__version__,

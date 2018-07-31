@@ -6,7 +6,7 @@ import pika
 
 
 class RabbitMqConsumer(object):
-    def __init__(self, amqp_url,
+    def __init__(self, amqp_urls,
                  exchange=None, exchange_type=None,
                  queue=None, queue_properties=None,
                  routing_key=None):
@@ -15,7 +15,7 @@ class RabbitMqConsumer(object):
         self._channel = None
         self._closing = False
         self._consumer_tag = None
-        self._url = amqp_url
+        self._urls = (amqp_urls,) if isinstance(amqp_urls, str) else amqp_urls
         self.exchange = exchange
         self.exchange_type = exchange_type
         self.queue = queue
@@ -24,11 +24,16 @@ class RabbitMqConsumer(object):
         self.logger = logging.getLogger(self.__module__)
 
     def connect(self):
-        self.logger.info('Connecting to %s', self._url)
-        return pika.SelectConnection(pika.URLParameters(self._url), self.on_connection_open, stop_ioloop_on_close=False)
+        self.logger.info('Connecting to %s', self._urls)
+        urls = tuple(map(pika.URLParameters, self._urls))
+        return pika.SelectConnection.create_connection(urls, self.on_connection_open)
 
-    def on_connection_open(self, unused_connection):
+    def on_connection_open(self, connection):
+        if isinstance(connection, Exception):
+            self.logger.error(connection)
+            raise connection
         self.logger.info('Connection opened')
+        self._connection = connection
         self.add_on_connection_close_callback()
         self.open_channel()
 
@@ -36,13 +41,13 @@ class RabbitMqConsumer(object):
         self.logger.info('Adding connection close callback')
         self._connection.add_on_close_callback(self.on_connection_closed)
 
-    def on_connection_closed(self, connection, reply_code, reply_text):
+    def on_connection_closed(self, connection, error):
         self._channel = None
         if self._closing:
             self._connection.ioloop.stop()
         else:
-            self.logger.warning('Connection closed, reopening in 5 seconds: (%s) %s', reply_code, reply_text)
-            self._connection.add_timeout(5, self.reconnect)
+            self.logger.warning('Connection closed, reopening in 5 seconds: (%r) %r', connection, error)
+            self._connection.ioloop.call_later(5, self.reconnect)
 
     def reconnect(self):
         # This is the old connection IOLoop instance, stop its ioloop
@@ -50,10 +55,10 @@ class RabbitMqConsumer(object):
 
         if not self._closing:
             # Create a new connection
-            self._connection = self.connect()
+            workflow = self.connect()
 
             # There is now a new connection, needs a new ioloop to run
-            self._connection.ioloop.start()
+            workflow._nbio.run()
 
     def open_channel(self):
         self.logger.info('Creating a new channel')
@@ -67,10 +72,10 @@ class RabbitMqConsumer(object):
 
     def add_on_channel_close_callback(self):
         self.logger.info('Adding channel close callback')
-        self._channel.add_on_close_callback(self.on_channel_closed)
+        # self._channel.add_on_close_callback(self.on_channel_closed)
 
-    def on_channel_closed(self, channel, reply_code, reply_text):
-        self.logger.warning('Channel %i was closed: (%s) %s', channel, reply_code, reply_text)
+    def on_channel_closed(self, channel, closing_reason):
+        self.logger.warning('Channel %s was closed: (%s)', channel, closing_reason)
         if not self._closing:
             self._connection.close()
 
@@ -88,11 +93,13 @@ class RabbitMqConsumer(object):
     def setup_queue(self):
         if self.queue:
             self.logger.info('Declaring queue %s', self.queue)
-            self._channel.queue_declare(self.on_queue_declareok, self.queue, arguments=self.queue_properties)
+            self._channel.queue_declare(callback=self.on_queue_declareok,
+                                        queue=self.queue, arguments=self.queue_properties)
 
             return
         if self.exchange:
-            self._channel.queue_declare(self.on_queue_declareok, arguments=self.queue_properties, exclusive=True)
+            self._channel.queue_declare(callback=self.on_queue_declareok,
+                                        arguments=self.queue_properties, exclusive=True)
             return
 
         self.on_queue_declareok(None)
@@ -114,7 +121,7 @@ class RabbitMqConsumer(object):
         self.logger.info('Issuing consumer related RPC commands')
         self.add_on_cancel_callback()
         self._channel.basic_qos(prefetch_count=1)
-        self._consumer_tag = self._channel.basic_consume(self.on_message, self.queue)
+        self._consumer_tag = self._channel.basic_consume(on_message_callback=self.on_message, queue=self.queue)
 
     def add_on_cancel_callback(self):
         self.logger.info('Adding consumer cancellation callback')
@@ -158,8 +165,8 @@ class RabbitMqConsumer(object):
     def run(self, callback=print):
         self.callback = callback
 
-        self._connection = self.connect()
-        self._connection.ioloop.start()
+        workflow = self.connect()
+        workflow._nbio.run()
 
     def stop(self):
         self.logger.info('Stopping')
