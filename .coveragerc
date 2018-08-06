@@ -1,6 +1,7 @@
 [run]
 branch = True
 source = queue_manager
+omit = .tox/*,*test_*
 
 [report]
 show_missing = True

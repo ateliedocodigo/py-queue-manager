@@ -2,12 +2,13 @@
 import os
 from setuptools import setup, find_packages
 
-__version__ = "1.3.0"
+__version__ = "1.4.0"
 __repo__ = "https://github.com/ateliedocodigo/py-queue-manager"
 
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
+
 
 setup(
     name="py-queue-manager",

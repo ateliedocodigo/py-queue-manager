@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+1.4.0
+-----
+
+* Supports multiple hosts on `RabbitMqConsumer` (requires pika's master branch) [See pika#528](https://github.com/pika/pika/issues/528)
+
 1.3.0
 -----
 

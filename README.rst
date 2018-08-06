@@ -53,7 +53,10 @@ Inspired on: asynchronous_consumer_example_
 
 .. code:: python
 
-    consumer = RabbitMqConsumer('amqp://username:password@hostname:port', queue='queue_name')
+    single_url = 'amqp://username:password@hostname:port'
+    # or multiple urls
+    multiple_urls = ('amqp://username:password@hostnameone:port', 'amqp://username:password@hostnametwo:port')
+    consumer = RabbitMqConsumer(single_url, queue='queue_name')
 
     try:
         def callback(body):
