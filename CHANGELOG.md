@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+Next Release
+-----
+
+* Supports multiple hosts on `QueueManager` (requires pika's master branch) [See pika#528](https://github.com/pika/pika/issues/528)
+
+
 1.4.0
 -----
 
