@@ -21,6 +21,12 @@ class QueueManager(object):
             warnings.warn("Deprecated parameter queue_args", DeprecationWarning)
 
     def __connect(self):
+        if 'urls' in self.connection_parameters:
+            self.connection = pika.BlockingConnection(
+                tuple(map(pika.URLParameters, self.connection_parameters['urls']))
+            )
+            return
+
         credentials = pika.PlainCredentials(
             self.connection_parameters.get('username'),
             self.connection_parameters.get('password')
