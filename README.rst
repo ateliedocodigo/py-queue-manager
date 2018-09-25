@@ -11,14 +11,16 @@ QueueManager class
 
 .. code:: python
 
-    from queue_manager import QueueManager
-
-    qm = QueueManager({
+    >>> from queue_manager import QueueManager
+    >>> conn_params = {
     ...     'host': '',
     ...     'port': '',
     ...     'username': '',
     ...     'password': ''
-    ... })
+    ... }
+    >>> # or use multiple urls
+    >>> conn_params = ('amqp://host1', 'amqp://host2',)
+    qm = QueueManager(conn_params)
     >>> qm.push('hello', 'Hello from QueueManager')
     True
     >>> qm.pop('hello')
