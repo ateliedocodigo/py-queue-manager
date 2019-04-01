@@ -24,7 +24,7 @@ setup(
     include_package_data=True,
     license="MIT",
     platforms="any",
-    install_requires=["pika"],
+    install_requires=["pika>=1"],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python :: 2.7",
