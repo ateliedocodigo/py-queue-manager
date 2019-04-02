@@ -82,7 +82,9 @@ class RabbitMqConsumer(object):
     def setup_exchange(self):
         if self.exchange:
             self.logger.info('Declaring exchange %s', self.exchange)
-            self._channel.exchange_declare(self.on_exchange_declareok, self.exchange, self.exchange_type)
+            self._channel.exchange_declare(callback=self.on_exchange_declareok,
+                                           exchange=self.exchange,
+                                           exchange_type=self.exchange_type)
             return
         self.on_exchange_declareok(None)
 
@@ -109,7 +111,8 @@ class RabbitMqConsumer(object):
             if not self.queue:
                 self.queue = method_frame.method.queue
             self.logger.info('Binding %s to %s with %s', self.exchange, self.queue, self.routing_key)
-            self._channel.queue_bind(self.on_bindok, self.queue, self.exchange, self.routing_key)
+            self._channel.queue_bind(callback=self.on_bindok,
+                                     queue=self.queue, exchange=self.exchange, routing_key=self.routing_key)
             return
         self.on_bindok(None)
 
