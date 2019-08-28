@@ -72,12 +72,11 @@ class RabbitMqConsumer(object):
 
     def add_on_channel_close_callback(self):
         self.logger.info('Adding channel close callback')
-        # self._channel.add_on_close_callback(self.on_channel_closed)
+        self._channel.add_on_close_callback(self.on_channel_closed)
 
     def on_channel_closed(self, channel, closing_reason):
         self.logger.warning('Channel %s was closed: (%s)', channel, closing_reason)
-        if not self._closing:
-            self._connection.close()
+        # just log, deal with disconnection at on_connection_closed
 
     def setup_exchange(self):
         if self.exchange:
@@ -101,7 +100,7 @@ class RabbitMqConsumer(object):
             return
         if self.exchange:
             self._channel.queue_declare(callback=self.on_queue_declareok,
-                                        arguments=self.queue_properties, exclusive=True)
+                                        queue='', arguments=self.queue_properties, exclusive=True)
             return
 
         self.on_queue_declareok(None)
@@ -144,10 +143,10 @@ class RabbitMqConsumer(object):
             raise e
         except Exception as e:
             self.logger.error(e, exc_info=True)
-            self.reject_message(basic_deliver.delivery_tag)
+            self.reject_message(basic_deliver.delivery_tag, not basic_deliver.redelivered)
 
-    def reject_message(self, delivery_tag):
-        self._channel.basic_reject(delivery_tag)
+    def reject_message(self, delivery_tag, requeue=True):
+        self._channel.basic_reject(delivery_tag, requeue)
 
     def acknowledge_message(self, delivery_tag):
         self._channel.basic_ack(delivery_tag)
