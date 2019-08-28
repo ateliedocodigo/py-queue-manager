@@ -68,6 +68,24 @@ Inspired on: asynchronous_consumer_example_
     except KeyboardInterrupt:
         consumer.stop()
 
+RabbitMqPublisher class
+.......................
+
+.. code:: python
+
+    from tornado.ioloop import IOLoop
+    from queue_manager.tornado_consumer import TornadoConsumer
+
+    consumer = TornadoConsumer('amqp://username:password@hostname:port',
+                               'exchange', 'exchange_type', 'queue_name', 'routing_key')
+
+
+    def callback(body):
+        print("message body", body)
+
+    consumer.run(callback)
+    IOLoop.instance().start()
+
 
 Running tests with ``tox``
 --------------------------
