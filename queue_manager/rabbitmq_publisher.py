@@ -4,116 +4,76 @@ import logging
 
 import pika
 
+logger = logging.getLogger(__name__)
 
-class RabbitMqPublisher(object):
-    def __init__(self, amqp_url, exchange, exchange_type, queue, routing_key):
-        self._connection = None
-        self._channel = None
-        self._closing = False
-        self._stopping = False
-        self._url = amqp_url
+
+class RabbitMqPublisher:
+    connection = None
+
+    def __init__(self, amqp_urls, exchange=None, exchange_type=None,
+                 queue=None, queue_properties=None, routing_key=None,
+                 declare=True):
+
+        self._urls = (amqp_urls,) if isinstance(amqp_urls, str) else amqp_urls
         self.exchange = exchange
         self.exchange_type = exchange_type
         self.queue = queue
+        self.queue_properties = queue_properties
         self.routing_key = routing_key
-        self.logger = logging.getLogger(self.__module__)
+        self.declare = declare
 
-    def connect(self):
-        self.logger.info('Connecting to %s', self._url)
-        return pika.SelectConnection(pika.URLParameters(self._url), self.on_connection_open, stop_ioloop_on_close=False)
+    def ping(self):
+        return self.__connect().is_open
 
-    def on_connection_open(self, unused_connection):
-        self.logger.info('Connection opened')
-        self.add_on_connection_close_callback()
-        self.open_channel()
+    def message_count(self):
+        channel = self.__connect().channel()
+        method_frame = channel.queue_declare(queue=self.queue, arguments=self.queue_properties)
 
-    def add_on_connection_close_callback(self):
-        self.logger.info('Adding connection close callback')
-        self._connection.add_on_close_callback(self.on_connection_closed)
+        return method_frame.method.message_count
 
-    def on_connection_closed(self, connection, reply_code, reply_text):
-        self._channel = None
-        if self._closing:
-            self._connection.ioloop.stop()
-        else:
-            self.logger.warning('Connection closed, reopening in 5 seconds: (%s) %s', reply_code, reply_text)
-            self._connection.add_timeout(5, self.reconnect)
+    def __connect(self):
+        logger.debug('Connecting to %s', self._urls)
+        urls = tuple(map(pika.URLParameters, self._urls))
 
-    def reconnect(self):
-        # This is the old connection IOLoop instance, stop its ioloop
-        self._connection.ioloop.stop()
+        self.connection = pika.BlockingConnection(urls)
+        return self.connection
 
-        if not self._closing:
-            # Create a new connection
-            self._connection = self.connect()
+    def __get_channel(self):
+        channel = self.__connect().channel()
+        if not self.declare:
+            return channel
 
-            # There is now a new connection, needs a new ioloop to run
-            self._connection.ioloop.start()
+        channel.queue_declare(queue=self.queue, arguments=self.queue_properties) if self.queue else None
+        channel.exchange_declare(exchange=self.exchange, exchange_type=self.exchange_type) if self.exchange else None
 
-    def open_channel(self):
-        self.logger.info('Creating a new channel')
-        self._connection.channel(on_open_callback=self.on_channel_open)
+        if self.queue and self.exchange:
+            channel.queue_bind(queue=self.queue, exchange=self.exchange, routing_key=self.routing_key)
 
-    def on_channel_open(self, channel):
-        self.logger.info('Channel opened')
-        self._channel = channel
-        self.add_on_channel_close_callback()
-        self.setup_exchange(self.exchange)
+        return channel
 
-    def add_on_channel_close_callback(self):
-        self.logger.info('Adding channel close callback')
-        self._channel.add_on_close_callback(self.on_channel_closed)
+    def get_publish_params(self, message, message_properties):
+        pika_properties = pika.BasicProperties(**message_properties) if message_properties else None
 
-    def on_channel_closed(self, channel, reply_code, reply_text):
-        self.logger.warning('Channel %i was closed: (%s) %s', channel, reply_code, reply_text)
-        if not self._closing:
-            self._connection.close()
+        return dict(
+                exchange=self.exchange or '',
+                routing_key=self.routing_key if isinstance(self.routing_key, str) else self.queue or '',
+                body=message,
+                properties=pika_properties,
+                mandatory=True
+        )
 
-    def setup_exchange(self, exchange_name):
-        self.logger.info('Declaring exchange %s', exchange_name)
-        self._channel.exchange_declare(self.on_exchange_declareok, exchange_name, self.exchange_type)
+    def publish_message(self, message, message_properties=None):
+        channel = self.__get_channel()
 
-    def on_exchange_declareok(self, unused_frame):
-        self.logger.info('Exchange declared')
-        self.setup_queue(self.queue)
+        ret = channel.basic_publish(**self.get_publish_params(message, message_properties))
 
-    def setup_queue(self, queue_name):
-        self.logger.info('Declaring queue %s', queue_name)
-        self._channel.queue_declare(self.on_queue_declareok, queue_name)
+        logger.debug("pushed %s return(%r)", message, ret)
+        self.__disconnect()
+        return ret
 
-    def on_queue_declareok(self, method_frame):
-        self.logger.info('Binding %s to %s with %s', self.exchange, self.queue, self.routing_key)
-        self._channel.queue_bind(self.on_bindok, self.queue, self.exchange, self.routing_key)
-
-    def on_bindok(self, unused_frame):
-        self.logger.info('Queue bound')
-
-    def publish_message(self, message):
-        if self._stopping:
+    def __disconnect(self):
+        if not self.connection:
             return
 
-        properties = pika.BasicProperties(app_id='example-publisher', content_type='application/json')
-
-        self._channel.basic_publish(self.exchange, self.routing_key, message, properties)
-
-    def close_channel(self):
-        self.logger.info('Closing the channel')
-        if self._channel:
-            self._channel.close()
-
-    def run(self):
-        self._connection = self.connect()
-        self._connection.ioloop.start()
-
-    def stop(self):
-        self.logger.info('Stopping')
-        self._stopping = True
-        self.close_channel()
-        self.close_connection()
-        self._connection.ioloop.start()
-        self.logger.info('Stopped')
-
-    def close_connection(self):
-        self.logger.info('Closing connection')
-        self._closing = True
-        self._connection.close()
+        logger.debug("disconnecting %r", self.connection.close())
+        self.connection = None
