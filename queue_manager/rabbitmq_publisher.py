@@ -23,13 +23,18 @@ class RabbitMqPublisher:
         self.declare = declare
 
     def ping(self):
-        return self.__connect().is_open
+        is_open = self.__connect().is_open
+        self.__disconnect()
+        return is_open
 
     def message_count(self):
         channel = self.__connect().channel()
         method_frame = channel.queue_declare(queue=self.queue, arguments=self.queue_properties)
 
-        return method_frame.method.message_count
+        message_count = method_frame.method.message_count
+
+        self.__disconnect()
+        return message_count
 
     def __connect(self):
         logger.debug('Connecting to %s', self._urls)
