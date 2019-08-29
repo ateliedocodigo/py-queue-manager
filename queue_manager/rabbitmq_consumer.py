@@ -4,12 +4,15 @@ import logging
 
 import pika
 
+logger = logging.getLogger(__name__)
 
-class RabbitMqConsumer(object):
+
+class RabbitMqConsumer:
     def __init__(self, amqp_urls,
                  exchange=None, exchange_type=None,
                  queue=None, queue_properties=None,
-                 routing_key=None):
+                 routing_key=None,
+                 declare=True):
 
         self._connection = None
         self._channel = None
@@ -21,24 +24,24 @@ class RabbitMqConsumer(object):
         self.queue = queue
         self.queue_properties = queue_properties
         self.routing_key = routing_key
-        self.logger = logging.getLogger(self.__module__)
+        self.declare = declare
 
     def connect(self):
-        self.logger.info('Connecting to %s', self._urls)
+        logger.info('Connecting to %s', self._urls)
         urls = tuple(map(pika.URLParameters, self._urls))
         return pika.SelectConnection.create_connection(urls, self.on_connection_open)
 
     def on_connection_open(self, connection):
         if isinstance(connection, Exception):
-            self.logger.error(connection)
+            logger.error(connection)
             raise connection
-        self.logger.info('Connection opened')
+        logger.info('Connection opened')
         self._connection = connection
         self.add_on_connection_close_callback()
         self.open_channel()
 
     def add_on_connection_close_callback(self):
-        self.logger.info('Adding connection close callback')
+        logger.info('Adding connection close callback')
         self._connection.add_on_close_callback(self.on_connection_closed)
 
     def on_connection_closed(self, connection, error):
@@ -46,7 +49,7 @@ class RabbitMqConsumer(object):
         if self._closing:
             self._connection.ioloop.stop()
         else:
-            self.logger.warning('Connection closed, reopening in 5 seconds: (%r) %r', connection, error)
+            logger.warning('Connection closed, reopening in 5 seconds: (%r) %r', connection, error)
             self._connection.ioloop.call_later(5, self.reconnect)
 
     def reconnect(self):
@@ -61,39 +64,41 @@ class RabbitMqConsumer(object):
             workflow._nbio.run()
 
     def open_channel(self):
-        self.logger.info('Creating a new channel')
+        logger.info('Creating a new channel')
         self._connection.channel(on_open_callback=self.on_channel_open)
 
     def on_channel_open(self, channel):
-        self.logger.info('Channel opened')
+        logger.info('Channel opened')
         self._channel = channel
         self.add_on_channel_close_callback()
+        if not self.declare:
+            return self.on_bindok()
         self.setup_exchange()
 
     def add_on_channel_close_callback(self):
-        self.logger.info('Adding channel close callback')
+        logger.info('Adding channel close callback')
         self._channel.add_on_close_callback(self.on_channel_closed)
 
     def on_channel_closed(self, channel, closing_reason):
-        self.logger.warning('Channel %s was closed: (%s)', channel, closing_reason)
+        logger.warning('Channel %s was closed: (%s)', channel, closing_reason)
         # just log, deal with disconnection at on_connection_closed
 
     def setup_exchange(self):
         if self.exchange:
-            self.logger.info('Declaring exchange %s', self.exchange)
+            logger.info('Declaring exchange %s', self.exchange)
             self._channel.exchange_declare(callback=self.on_exchange_declareok,
                                            exchange=self.exchange,
                                            exchange_type=self.exchange_type)
             return
-        self.on_exchange_declareok(None)
+        self.on_exchange_declareok()
 
-    def on_exchange_declareok(self, unused_frame):
-        self.logger.info('Exchange declared')
+    def on_exchange_declareok(self, unused_frame=None):
+        logger.info('Exchange declared')
         self.setup_queue()
 
     def setup_queue(self):
         if self.queue:
-            self.logger.info('Declaring queue %s', self.queue)
+            logger.info('Declaring queue %s', self.queue)
             self._channel.queue_declare(callback=self.on_queue_declareok,
                                         queue=self.queue, arguments=self.queue_properties)
 
@@ -109,28 +114,28 @@ class RabbitMqConsumer(object):
         if self.exchange:
             if not self.queue:
                 self.queue = method_frame.method.queue
-            self.logger.info('Binding %s to %s with %s', self.exchange, self.queue, self.routing_key)
+            logger.info('Binding %s to %s with %s', self.exchange, self.queue, self.routing_key)
             self._channel.queue_bind(callback=self.on_bindok,
                                      queue=self.queue, exchange=self.exchange, routing_key=self.routing_key)
             return
-        self.on_bindok(None)
+        self.on_bindok()
 
-    def on_bindok(self, unused_frame):
-        self.logger.info('Queue bound')
+    def on_bindok(self, unused_frame=None):
+        logger.info('Queue bound')
         self.start_consuming()
 
     def start_consuming(self):
-        self.logger.info('Issuing consumer related RPC commands')
+        logger.info('Issuing consumer related RPC commands')
         self.add_on_cancel_callback()
         self._channel.basic_qos(prefetch_count=1)
         self._consumer_tag = self._channel.basic_consume(on_message_callback=self.on_message, queue=self.queue)
 
     def add_on_cancel_callback(self):
-        self.logger.info('Adding consumer cancellation callback')
+        logger.info('Adding consumer cancellation callback')
         self._channel.add_on_cancel_callback(self.on_consumer_cancelled)
 
     def on_consumer_cancelled(self, method_frame):
-        self.logger.info('Consumer was cancelled remotely, shutting down: %r', method_frame)
+        logger.info('Consumer was cancelled remotely, shutting down: %r', method_frame)
         if self._channel:
             self._channel.close()
 
@@ -138,11 +143,11 @@ class RabbitMqConsumer(object):
         try:
             self.callback(body)
             self.acknowledge_message(basic_deliver.delivery_tag)
-        except (KeyboardInterrupt, SystemExit) as e:
+        except KeyboardInterrupt as e:
             self.reject_message(basic_deliver.delivery_tag)
             raise e
         except Exception as e:
-            self.logger.error(e, exc_info=True)
+            logger.exception(e)
             self.reject_message(basic_deliver.delivery_tag, not basic_deliver.redelivered)
 
     def reject_message(self, delivery_tag, requeue=True):
@@ -153,15 +158,15 @@ class RabbitMqConsumer(object):
 
     def stop_consuming(self):
         if self._channel:
-            self.logger.info('Sending a Basic.Cancel RPC command to RabbitMQ')
+            logger.info('Sending a Basic.Cancel RPC command to RabbitMQ')
             self._channel.basic_cancel(self.on_cancelok, self._consumer_tag)
 
     def on_cancelok(self, unused_frame):
-        self.logger.info('RabbitMQ acknowledged the cancellation of the consumer')
+        logger.info('RabbitMQ acknowledged the cancellation of the consumer')
         self.close_channel()
 
     def close_channel(self):
-        self.logger.info('Closing the channel')
+        logger.info('Closing the channel')
         self._channel.close()
 
     def run(self, callback=print):
@@ -171,13 +176,13 @@ class RabbitMqConsumer(object):
         workflow._nbio.run()
 
     def stop(self):
-        self.logger.info('Stopping')
+        logger.info('Stopping')
         self._closing = True
         self.stop_consuming()
         self._connection.ioloop.start()
-        self.logger.info('Stopped')
+        logger.info('Stopped')
 
     def close_connection(self):
-        self.logger.info('Closing connection')
+        logger.info('Closing connection')
         self._closing = True
         self._connection.close()
