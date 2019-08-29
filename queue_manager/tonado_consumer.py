@@ -1,3 +1,5 @@
+import logging
+
 import pika
 import sys
 
@@ -11,6 +13,8 @@ except ModuleNotFoundError:
 else:
     tornado_installed = True
 
+logger = logging.getLogger(__name__)
+
 
 class TornadoConsumer(RabbitMqConsumer):
     callback = None
@@ -21,7 +25,7 @@ class TornadoConsumer(RabbitMqConsumer):
         super(TornadoConsumer, self).__init__(*args, **kwargs)
 
     def connect(self):
-        self.logger.info('Connecting to %s', self._urls)
+        logger.info('Connecting to %s', self._urls)
         urls = tuple(map(pika.URLParameters, self._urls))
         return TornadoConnection.create_connection(urls, self.on_connection_open)
 
@@ -39,5 +43,6 @@ class TornadoConsumer(RabbitMqConsumer):
     def connect_or_exit(self):
         try:
             self.connect()
-        except Exception:
+        except Exception as e:
+            logger.error(e)
             sys.exit(1)
