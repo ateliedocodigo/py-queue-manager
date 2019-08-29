@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Inspired on: http://pika.readthedocs.io/en/0.10.0/examples/asynchronous_consumer_example.html"""
+"""Inspired on: http://pika.readthedocs.io/en/0.13.1/examples/asynchronous_consumer_example.html"""
 import logging
 
 import pika

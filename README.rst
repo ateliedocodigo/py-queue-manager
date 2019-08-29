@@ -30,8 +30,6 @@ QueueManager class
 RabbitMqPublisher class
 .......................
 
-Inspired on: asynchronous_publisher_example_
-
 .. code:: python
 
     from queue_manager import RabbitMqPublisher
@@ -39,11 +37,9 @@ Inspired on: asynchronous_publisher_example_
     producer = RabbitMqPublisher('amqp://username:password@hostname:port',
                                  'exchange', 'exchange_type', 'queue_name', 'routing_key')
 
-    producer.run()
-
     producer.publish_message('hello')
-
-    producer.stop()
+    # or passing message property
+    producer.publish_message('hello', dict(priority=8))
 
 
 RabbitMqConsumer class
@@ -68,7 +64,7 @@ Inspired on: asynchronous_consumer_example_
     except KeyboardInterrupt:
         consumer.stop()
 
-RabbitMqPublisher class
+TornadoConsumer class
 .......................
 
 .. code:: python
@@ -102,7 +98,4 @@ Run tests
 
     tox
 
-
-.. _asynchronous_publisher_example: http://pika.readthedocs.io/en/0.10.0/examples/asynchronous_publisher_example.html
-
-.. _asynchronous_consumer_example: http://pika.readthedocs.io/en/0.10.0/examples/asynchronous_consumer_example.html
+.. _asynchronous_consumer_example: http://pika.readthedocs.io/en/0.13.1/examples/asynchronous_consumer_example.html
