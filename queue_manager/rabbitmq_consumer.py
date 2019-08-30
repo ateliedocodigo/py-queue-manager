@@ -1,5 +1,25 @@
 # -*- coding: utf-8 -*-
-"""Inspired on: http://pika.readthedocs.io/en/0.13.1/examples/asynchronous_consumer_example.html"""
+"""
+Inspired on `Asynchronous Cnsumer Example
+<http://pika.readthedocs.io/en/0.13.1/examples/asynchronous_consumer_example.html>`_
+
+.. code:: python
+
+    single_url = 'amqp://username:password@hostname:port'
+    # or multiple urls
+    multiple_urls = (
+        'amqp://username:password@hostnameone:port', 'amqp://username:password@hostnametwo:port'
+    )
+    consumer = RabbitMqConsumer(single_url, queue='queue_name')
+
+    def callback(body):
+        print("message body", body)
+
+    try:
+        consumer.run(callback)
+    except KeyboardInterrupt:
+        consumer.stop()
+"""
 import logging
 
 import pika

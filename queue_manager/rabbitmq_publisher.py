@@ -1,5 +1,16 @@
 # -*- coding: utf-8 -*-
-"""Inspired on: http://pika.readthedocs.io/en/0.10.0/examples/asynchronous_publisher_example.html"""
+"""
+.. code:: python
+
+    from queue_manager import RabbitMqPublisher
+
+    producer = RabbitMqPublisher('amqp://username:password@hostname:port',
+                                 'exchange', 'exchange_type', 'queue_name', 'routing_key')
+
+    producer.publish_message('hello')
+    # or passing message property
+    producer.publish_message('hello', dict(priority=8))
+"""
 import logging
 
 import pika
