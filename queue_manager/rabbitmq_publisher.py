@@ -39,8 +39,10 @@ class RabbitMqPublisher:
         return is_open
 
     def message_count(self):
+        if not self.queue and not self.routing_key:
+            raise Exception('Count messages works only on queues')
         channel = self.__connect().channel()
-        method_frame = channel.queue_declare(queue=self.queue, arguments=self.queue_properties)
+        method_frame = channel.queue_declare(queue=self.queue or self.routing_key, passive=True)
 
         message_count = method_frame.method.message_count
 
