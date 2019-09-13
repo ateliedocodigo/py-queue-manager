@@ -23,7 +23,7 @@ class RabbitMqPublisher:
 
     def __init__(self, amqp_urls, exchange=None, exchange_type=None,
                  queue=None, queue_properties=None, routing_key=None,
-                 declare=True):
+                 declare=True, confirm_delivery=True):
 
         self._urls = (amqp_urls,) if isinstance(amqp_urls, str) else amqp_urls
         self.exchange = exchange
@@ -32,6 +32,7 @@ class RabbitMqPublisher:
         self.queue_properties = queue_properties
         self.routing_key = routing_key
         self.declare = declare
+        self.confirm_delivery = confirm_delivery
 
     def ping(self):
         is_open = self.__connect().is_open
@@ -58,6 +59,7 @@ class RabbitMqPublisher:
 
     def __get_channel(self):
         channel = self.__connect().channel()
+        self.confirm_delivery and channel.confirm_delivery()
         if not self.declare:
             return channel
 
