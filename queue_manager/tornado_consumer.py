@@ -33,7 +33,6 @@ logger = logging.getLogger(__name__)
 
 
 class TornadoConsumer(RabbitMqConsumer):
-    callback = None
 
     def __init__(self, *args, **kwargs):
         if not tornado_installed:
@@ -53,7 +52,7 @@ class TornadoConsumer(RabbitMqConsumer):
         self.connect()
 
     def run(self, callback=print):
-        self.callback = self.callback or callback
+        self.callback = self.validate_callback(self.callback or callback)
         IOLoop.instance().add_timeout(5000, self.connect_or_exit)
 
     def connect_or_exit(self):

@@ -21,6 +21,7 @@ Inspired on `Asynchronous Cnsumer Example
         consumer.stop()
 """
 import logging
+from inspect import signature
 
 import pika
 
@@ -28,6 +29,8 @@ logger = logging.getLogger(__name__)
 
 
 class RabbitMqConsumer:
+    callback = None
+
     def __init__(self, amqp_urls,
                  exchange=None, exchange_type=None,
                  queue=None, queue_properties=None,
@@ -159,9 +162,9 @@ class RabbitMqConsumer:
         if self._channel:
             self._channel.close()
 
-    def on_message(self, unused_channel, basic_deliver, properties, body):
+    def on_message(self, unused_channel, basic_deliver, properties, message):
         try:
-            self.callback(body)
+            self.callback(message, properties)
             self.acknowledge_message(basic_deliver.delivery_tag)
         except KeyboardInterrupt as e:
             self.reject_message(basic_deliver.delivery_tag)
@@ -189,8 +192,15 @@ class RabbitMqConsumer:
         logger.info('Closing the channel')
         self._channel.close()
 
+    @staticmethod
+    def validate_callback(callback):
+        if 'properties' not in signature(callback).parameters:
+            logger.warning('properties parameter missing on callback signature')
+            return lambda message, properties: callback(message)
+        return callback
+
     def run(self, callback=print):
-        self.callback = callback
+        self.callback = self.validate_callback(self.callback or callback)
 
         workflow = self.connect()
         workflow._nbio.run()
