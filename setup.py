@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+
 from setuptools import setup, find_packages
 
 __version__ = "1.9.0"
@@ -24,7 +25,7 @@ setup(
     include_package_data=True,
     license="MIT",
     platforms="any",
-    install_requires=["pika>=1"],
+    install_requires=[],  # ["pika<2", "google-cloud-pubsub<2"],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python :: 2.7",
