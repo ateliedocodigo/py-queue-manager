@@ -15,13 +15,12 @@
     IOLoop.instance().start()
 """
 import logging
-
-import pika
 import sys
 
 from queue_manager.rabbitmq_consumer import RabbitMqConsumer
 
 try:
+    import pika
     from pika.adapters.tornado_connection import TornadoConnection
     from tornado.ioloop import IOLoop
 except ModuleNotFoundError:

@@ -13,7 +13,12 @@
 """
 import logging
 
-import pika
+try:
+    import pika
+except ImportError:
+    pika_installed = False
+else:
+    pika_installed = True
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +29,9 @@ class RabbitMqPublisher:
     def __init__(self, amqp_urls, exchange=None, exchange_type=None,
                  queue=None, queue_properties=None, routing_key=None,
                  declare=True, confirm_delivery=True):
+
+        if not pika_installed:
+            raise Exception("Invalid publisher, pika is not installed")
 
         self._urls = (amqp_urls,) if isinstance(amqp_urls, str) else amqp_urls
         self.exchange = exchange

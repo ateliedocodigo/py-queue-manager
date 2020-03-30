@@ -23,7 +23,12 @@ Inspired on `Asynchronous Cnsumer Example
 import logging
 from inspect import signature
 
-import pika
+try:
+    import pika
+except ImportError:
+    pika_installed = False
+else:
+    pika_installed = True
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +41,9 @@ class RabbitMqConsumer:
                  queue=None, queue_properties=None,
                  routing_key=None,
                  declare=True):
+
+        if not pika_installed:
+            raise Exception("Invalid consumer, pika is not installed")
 
         self._connection = None
         self._channel = None
