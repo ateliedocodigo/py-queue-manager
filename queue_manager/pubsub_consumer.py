@@ -18,6 +18,8 @@ class PubsubConsumer:
         self.service_account_file_path = service_account_file_path
         self.subscription_name = subscription_name
         self.topic_name = topic_name
+        self.client = self.setup_client()
+        self.subscription_path = self.client.subscription_path(self.project_id, self.subscription_name)
 
     def on_message(self, message):
         try:
@@ -29,22 +31,20 @@ class PubsubConsumer:
             logger.info(f"Message acknowledged: {message.data}")
             message.ack()
 
+    def setup_client(self):
+        credentials = service_account.Credentials.from_service_account_file(
+            self.service_account_file_path, scopes=(self.scope,)
+        )
+        return pubsub.SubscriberClient(credentials=credentials)
+
     def start_listening(self, callback=print):
         self.callback = callback
         logger.info("Trying to connect to PubSub ...")
 
-        credentials = service_account.Credentials.from_service_account_file(
-            self.service_account_file_path, scopes=(self.scope,)
-        )
-
-        self.client = pubsub.SubscriberClient(credentials=credentials)
-
-        self.subscription_path = self.client.subscription_path(self.project_id, self.subscription_name)
-
         try:
             self.client.get_subscription(self.subscription_path)
         except google.api_core.exceptions.NotFound as err:
-            logger.error('Error: Subscription DO NOT exits. App will try to create automatically.', err)
+            logger.warning('Subscription DO NOT exits. App will try to create automatically.', err)
             topic_path = self.client.topic_path(self.project_id, self.topic_name)
             self.client.create_subscription(self.subscription_path, topic_path)
             # create the subscription, if goes well continue, if not let the Exception throws
@@ -54,6 +54,11 @@ class PubsubConsumer:
         logger.info("Application is listening to the PubSub topic...")
 
     def is_connected(self):
+        from warnings import warn
+        warn('Deprecated, use ping instead', DeprecationWarning)
+        return self.ping()
+
+    def ping(self):
         try:
             self.client.get_subscription(self.subscription_path)
             return True
