@@ -229,3 +229,6 @@ class RabbitMqConsumer:
         logger.info('Closing connection')
         self._closing = True
         self._connection.close()
+
+    def ping(self):
+        return self._connection and self._connection.is_open
