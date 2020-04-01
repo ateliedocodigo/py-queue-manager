@@ -40,11 +40,11 @@ class PubsubConsumer:
     def start_listening(self, callback=print):
         self.callback = callback
         logger.info("Trying to connect to PubSub ...")
-
         try:
             self.client.get_subscription(self.subscription_path)
-        except google.api_core.exceptions.NotFound as err:
-            logger.warning('Subscription DO NOT exits. App will try to create automatically.', err)
+        except google.api_core.exceptions.NotFound:
+            logger.warning('Subscription (%s) DO NOT exits. App will try to create automatically.',
+                           self.subscription_path)
             topic_path = self.client.topic_path(self.project_id, self.topic_name)
             self.client.create_subscription(self.subscription_path, topic_path)
             # create the subscription, if goes well continue, if not let the Exception throws
