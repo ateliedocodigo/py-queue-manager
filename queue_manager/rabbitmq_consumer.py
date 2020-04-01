@@ -16,7 +16,7 @@ Inspired on `Asynchronous Cnsumer Example
         print("message body", body)
 
     try:
-        consumer.run(callback)
+        consumer.start_listening(callback)
     except KeyboardInterrupt:
         consumer.stop()
 """
@@ -208,6 +208,11 @@ class RabbitMqConsumer:
         return callback
 
     def run(self, callback=print):
+        from warnings import warn
+        warn('Deprecated, use start_listening instead', DeprecationWarning)
+        return self.start_listening(callback)
+
+    def start_listening(self, callback=print):
         self.callback = self.validate_callback(self.callback or callback)
 
         workflow = self.connect()

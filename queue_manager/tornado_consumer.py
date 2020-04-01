@@ -11,7 +11,7 @@
     def callback(body):
         print("message body", body)
 
-    consumer.run(callback)
+    consumer.start_listening(callback)
     IOLoop.instance().start()
 """
 import logging
@@ -50,7 +50,7 @@ class TornadoConsumer(RabbitMqConsumer):
         # Create a new connection
         self.connect()
 
-    def run(self, callback=print):
+    def start_listening(self, callback=print):
         self.callback = self.validate_callback(self.callback or callback)
         IOLoop.instance().add_timeout(5000, self.connect_or_exit)
 
