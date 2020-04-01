@@ -57,6 +57,11 @@ class PubsubPublisher:
         return message_id
 
     def send_message(self, payload):
+        from warnings import warn
+        warn('Deprecated, use publish_message instead', DeprecationWarning)
+        return self.publish_message(payload)
+
+    def publish_message(self, payload):
         self.assert_topic(self.full_topic_name)
         response = self.client.publish(self.full_topic_name, bytes(payload.encode(encoding='UTF-8')))
         return response.result(timeout=5000)
