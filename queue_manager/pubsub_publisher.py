@@ -61,7 +61,9 @@ class PubsubPublisher:
         warn('Deprecated, use publish_message instead', DeprecationWarning)
         return self.publish_message(payload)
 
-    def publish_message(self, payload):
+    def publish_message(self, message):
+        if type(message) is not bytes:
+            message = message.encode('utf-8')
         self.assert_topic(self.full_topic_name)
-        response = self.client.publish(self.full_topic_name, bytes(payload.encode(encoding='UTF-8')))
+        response = self.client.publish(self.full_topic_name, message)
         return response.result(timeout=5000)
