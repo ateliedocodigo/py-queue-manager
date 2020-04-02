@@ -1,7 +1,7 @@
 """
 .. code::
 
-    from queue_manager import QueueManager
+    from queue_manager.queue_manager import QueueManager
     conn_params = {
         'host': '',
         'port': '',
@@ -32,7 +32,7 @@ class QueueManager:
 
     def __init__(self, connection_parameters, logger=logging.getLogger(__name__)):
         self.logger = logger
-        self.logger.debug("init Queuer Manager")
+        self.logger.debug("init Queue Manager")
         self.logger.debug("connection parameters %s:%s", connection_parameters.get('host'),
                           connection_parameters.get('port'))
         self.connection_parameters = connection_parameters
@@ -108,6 +108,6 @@ class QueueManager:
             self.connection = None
 
     def __del__(self):
-        """Disconnect when delete objet."""
+        """Disconnect when delete object."""
         self.logger.info("Finishing")
         self.__disconnect()
