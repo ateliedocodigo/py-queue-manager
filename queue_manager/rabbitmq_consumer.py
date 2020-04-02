@@ -50,6 +50,7 @@ class RabbitMqConsumer:
         self._closing = False
         self._consumer_tag = None
         self._urls = (amqp_urls,) if isinstance(amqp_urls, str) else amqp_urls
+        self.urls = tuple(map(pika.URLParameters, self._urls))
         self.exchange = exchange
         self.exchange_type = exchange_type
         self.queue = queue
@@ -59,8 +60,8 @@ class RabbitMqConsumer:
 
     def connect(self):
         logger.info('Connecting to %s', self._urls)
-        urls = tuple(map(pika.URLParameters, self._urls))
-        return pika.SelectConnection.create_connection(urls, self.on_connection_open)
+
+        return pika.SelectConnection.create_connection(self.urls, self.on_connection_open)
 
     def on_connection_open(self, connection):
         if isinstance(connection, Exception):
@@ -231,4 +232,6 @@ class RabbitMqConsumer:
         self._connection.close()
 
     def ping(self):
-        return self._connection and self._connection.is_open
+        if self._connection is not None:
+            return self._connection.is_open
+        return pika.BlockingConnection(self.urls).is_open
