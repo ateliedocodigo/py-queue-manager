@@ -21,6 +21,7 @@ Inspired on `Asynchronous Cnsumer Example
         consumer.stop()
 """
 import logging
+import sys
 from inspect import signature
 
 try:
@@ -66,7 +67,7 @@ class RabbitMqConsumer:
     def on_connection_open(self, connection):
         if isinstance(connection, Exception):
             logger.error(connection)
-            raise connection
+            sys.exit(1)
         logger.info('Connection opened')
         self._connection = connection
         self.add_on_connection_close_callback()
@@ -112,8 +113,9 @@ class RabbitMqConsumer:
         self._channel.add_on_close_callback(self.on_channel_closed)
 
     def on_channel_closed(self, channel, closing_reason):
-        logger.warning('Channel %s was closed: (%s)', channel, closing_reason)
-        # just log, deal with disconnection at on_connection_closed
+        logger.error('Channel %s was closed: (%s)', channel, closing_reason)
+        if not self._closing:
+            self._connection.close()
 
     def setup_exchange(self):
         if self.exchange:
