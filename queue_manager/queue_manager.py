@@ -18,9 +18,11 @@
     del(qm)
 """
 import logging
-import warnings
 
-import pika
+try:
+    import pika
+except ModuleNotFoundError:
+    raise ModuleNotFoundError("You need to install pika")
 
 
 class QueueManager:
@@ -28,32 +30,29 @@ class QueueManager:
     connection_parameters = {}
     logger = None
 
-    def __init__(self, connection_parameters, queue_args=None, logger=logging.getLogger(__name__)):
+    def __init__(self, connection_parameters, logger=logging.getLogger(__name__)):
         self.logger = logger
         self.logger.debug("init Queuer Manager")
         self.logger.debug("connection parameters %s:%s", connection_parameters.get('host'),
                           connection_parameters.get('port'))
         self.connection_parameters = connection_parameters
-        if queue_args:
-            self.logger.warning("Deprecated parameter queue_args")
-            warnings.warn("Deprecated parameter queue_args", DeprecationWarning)
 
     def __connect(self):
         if 'urls' in self.connection_parameters:
             self.connection = pika.BlockingConnection(
-                    tuple(map(pika.URLParameters, self.connection_parameters['urls']))
+                tuple(map(pika.URLParameters, self.connection_parameters['urls']))
             )
             return
 
         credentials = pika.PlainCredentials(
-                self.connection_parameters.get('username'),
-                self.connection_parameters.get('password')
+            self.connection_parameters.get('username'),
+            self.connection_parameters.get('password')
         )
         parameters = pika.ConnectionParameters(
-                host=self.connection_parameters.get('host'),
-                port=self.connection_parameters.get('port'),
-                virtual_host='/',
-                credentials=credentials)
+            host=self.connection_parameters.get('host'),
+            port=self.connection_parameters.get('port'),
+            virtual_host='/',
+            credentials=credentials)
         self.connection = pika.BlockingConnection(parameters)
 
     def __get_channel(self, queue_name=None, queue_args=None):
@@ -75,10 +74,10 @@ class QueueManager:
         channel = self.__get_channel(queue_name, queue_args)
         self.logger.debug("pushing %s to queue %s", body, queue_name)
         ret = channel.basic_publish(
-                exchange='',
-                routing_key=queue_name,
-                body=body,
-                properties=pika_properties
+            exchange='',
+            routing_key=queue_name,
+            body=body,
+            properties=pika_properties
         )
         self.logger.debug("pushed %s to queue %s return(%r)", body, queue_name, ret)
         self.__disconnect()

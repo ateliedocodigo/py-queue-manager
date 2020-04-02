@@ -26,10 +26,8 @@ from inspect import signature
 
 try:
     import pika
-except ImportError:
-    pika_installed = False
-else:
-    pika_installed = True
+except ModuleNotFoundError:
+    raise ModuleNotFoundError("You need to install pika")
 
 logger = logging.getLogger(__name__)
 
@@ -42,9 +40,6 @@ class RabbitMqConsumer:
                  queue=None, queue_properties=None,
                  routing_key=None,
                  declare=True):
-
-        if not pika_installed:
-            raise Exception("Invalid consumer, pika is not installed")
 
         self._connection = None
         self._channel = None

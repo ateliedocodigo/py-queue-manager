@@ -1,10 +1,26 @@
 #!/usr/bin/env python
+"""
+.. code:: python
+
+    consumer = PubsubConsumer('project_id', 'path/to/sa.json', 'subscription_name', 'topic_name')
+
+    def callback(message):
+        print("message", message)
+
+    try:
+        consumer.start_listening(callback)
+    except KeyboardInterrupt:
+        consumer.stop()
+"""
 from logging import getLogger
 
-import google
-from google.api_core.exceptions import GoogleAPICallError
-from google.cloud import pubsub
-from google.oauth2 import service_account
+try:
+    import google
+    from google.api_core.exceptions import GoogleAPICallError
+    from google.cloud import pubsub
+    from google.oauth2.service_account import Credentials
+except ModuleNotFoundError:
+    raise ModuleNotFoundError("You need to install google-cloud-pubsub")
 
 logger = getLogger(__name__)
 
@@ -32,7 +48,7 @@ class PubsubConsumer:
             message.ack()
 
     def setup_client(self):
-        credentials = service_account.Credentials.from_service_account_file(
+        credentials = Credentials.from_service_account_file(
             self.service_account_file_path, scopes=(self.scope,)
         )
         return pubsub.SubscriberClient(credentials=credentials)

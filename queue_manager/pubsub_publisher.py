@@ -1,8 +1,19 @@
+#!/usr/bin/env python
+"""
+.. code:: python
+
+    publisher = PubsubPublisher('project_id', 'path/to/sa.json', 'topic_name')
+
+    publisher.publish_message('hello')
+"""
 import logging
 
-from google.api_core.exceptions import GoogleAPICallError
-from google.cloud import pubsub_v1
-from google.oauth2 import service_account
+try:
+    from google.api_core.exceptions import GoogleAPICallError
+    from google.cloud import pubsub_v1
+    from google.oauth2.service_account import Credentials
+except ImportError:
+    raise Exception("You need to install google-cloud-pubsub")
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +53,7 @@ class PubsubPublisher:
                 raise error
 
     def get_pubsub_client(self):
-        credentials = service_account.Credentials.from_service_account_file(
+        credentials = Credentials.from_service_account_file(
             self.service_account_file_path,
             scopes=(self.scope,)
         )
@@ -55,11 +66,6 @@ class PubsubPublisher:
         message_id = response.result(timeout=5000)
         logger.debug(f"Response from PubSub: {message_id}")
         return message_id
-
-    def send_message(self, payload):
-        from warnings import warn
-        warn('Deprecated, use publish_message instead', DeprecationWarning)
-        return self.publish_message(payload)
 
     def publish_message(self, message):
         if type(message) is not bytes:

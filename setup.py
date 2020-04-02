@@ -25,7 +25,12 @@ setup(
     include_package_data=True,
     license="MIT",
     platforms="any",
-    install_requires=[],  # ["pika<2", "google-cloud-pubsub<2"],
+    # package_dir={"queue_manager":"queue_manager"},
+    extras_require={
+        "rabbitmq": ["pika<2"],
+        "pubsub": ["google-cloud-pubsub<2"],
+    },
+    install_requires=[],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python :: 2.7",
