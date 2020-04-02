@@ -114,8 +114,9 @@ class RabbitMqConsumer:
 
     def on_channel_closed(self, channel, closing_reason):
         logger.error('Channel %s was closed: (%s)', channel, closing_reason)
-        if not self._closing:
-            self._connection.close()
+        if not self._closing and self._connection.is_open:
+            return self._connection.close()
+        self._connection.ioloop.stop()
 
     def setup_exchange(self):
         if self.exchange:
