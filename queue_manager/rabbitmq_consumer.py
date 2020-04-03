@@ -16,14 +16,18 @@ Inspired on `Asynchronous Cnsumer Example
         print("message body", body)
 
     try:
-        consumer.run(callback)
+        consumer.start_listening(callback)
     except KeyboardInterrupt:
         consumer.stop()
 """
 import logging
+import sys
 from inspect import signature
 
-import pika
+try:
+    import pika
+except ModuleNotFoundError:
+    raise ModuleNotFoundError("You need to install pika")
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +46,7 @@ class RabbitMqConsumer:
         self._closing = False
         self._consumer_tag = None
         self._urls = (amqp_urls,) if isinstance(amqp_urls, str) else amqp_urls
+        self.urls = tuple(map(pika.URLParameters, self._urls))
         self.exchange = exchange
         self.exchange_type = exchange_type
         self.queue = queue
@@ -51,13 +56,13 @@ class RabbitMqConsumer:
 
     def connect(self):
         logger.info('Connecting to %s', self._urls)
-        urls = tuple(map(pika.URLParameters, self._urls))
-        return pika.SelectConnection.create_connection(urls, self.on_connection_open)
+
+        return pika.SelectConnection.create_connection(self.urls, self.on_connection_open)
 
     def on_connection_open(self, connection):
         if isinstance(connection, Exception):
             logger.error(connection)
-            raise connection
+            sys.exit(1)
         logger.info('Connection opened')
         self._connection = connection
         self.add_on_connection_close_callback()
@@ -103,8 +108,10 @@ class RabbitMqConsumer:
         self._channel.add_on_close_callback(self.on_channel_closed)
 
     def on_channel_closed(self, channel, closing_reason):
-        logger.warning('Channel %s was closed: (%s)', channel, closing_reason)
-        # just log, deal with disconnection at on_connection_closed
+        logger.error('Channel %s was closed: (%s)', channel, closing_reason)
+        if not self._closing and self._connection.is_open:
+            return self._connection.close()
+        self._connection.ioloop.stop()
 
     def setup_exchange(self):
         if self.exchange:
@@ -200,6 +207,11 @@ class RabbitMqConsumer:
         return callback
 
     def run(self, callback=print):
+        from warnings import warn
+        warn('Deprecated, use start_listening instead', DeprecationWarning)
+        return self.start_listening(callback)
+
+    def start_listening(self, callback=print):
         self.callback = self.validate_callback(self.callback or callback)
 
         workflow = self.connect()
@@ -216,3 +228,8 @@ class RabbitMqConsumer:
         logger.info('Closing connection')
         self._closing = True
         self._connection.close()
+
+    def ping(self):
+        if self._connection is not None:
+            return self._connection.is_open
+        return pika.BlockingConnection(self.urls).is_open

@@ -11,17 +11,15 @@
     def callback(body):
         print("message body", body)
 
-    consumer.run(callback)
+    consumer.start_listening(callback)
     IOLoop.instance().start()
 """
 import logging
 
-import pika
-import sys
-
 from queue_manager.rabbitmq_consumer import RabbitMqConsumer
 
 try:
+    import pika
     from pika.adapters.tornado_connection import TornadoConnection
     from tornado.ioloop import IOLoop
 except ModuleNotFoundError:
@@ -51,13 +49,6 @@ class TornadoConsumer(RabbitMqConsumer):
         # Create a new connection
         self.connect()
 
-    def run(self, callback=print):
+    def start_listening(self, callback=print):
         self.callback = self.validate_callback(self.callback or callback)
-        IOLoop.instance().add_timeout(5000, self.connect_or_exit)
-
-    def connect_or_exit(self):
-        try:
-            self.connect()
-        except Exception as e:
-            logger.error(e)
-            sys.exit(1)
+        IOLoop.instance().add_timeout(5000, self.connect)

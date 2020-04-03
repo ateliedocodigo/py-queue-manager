@@ -11,7 +11,7 @@ QueueManager class
 
 .. code:: python
 
-    >>> from queue_manager import QueueManager
+    >>> from queue_manager.queue_manager import QueueManager
     >>> conn_params = {
     ...     'host': '',
     ...     'port': '',
@@ -32,7 +32,7 @@ RabbitMqPublisher class
 
 .. code:: python
 
-    from queue_manager import RabbitMqPublisher
+    from queue_manager.rabbitmq_consumer import RabbitMqPublisher
 
     producer = RabbitMqPublisher('amqp://username:password@hostname:port',
                                  'exchange', 'exchange_type', 'queue_name', 'routing_key')
@@ -82,6 +82,20 @@ TornadoConsumer class
     consumer.run(callback)
     IOLoop.instance().start()
 
+PubsubConsumer class
+.......................
+
+.. code:: python
+
+    consumer = PubsubConsumer('project_id', 'path/to/sa.json', 'subscription_name', 'topic_name')
+
+    def callback(message):
+        print("message", message)
+
+    try:
+        consumer.start_listening(callback)
+    except KeyboardInterrupt:
+        consumer.stop()
 
 Running tests with ``tox``
 --------------------------

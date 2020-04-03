@@ -33,6 +33,16 @@ TornadoConsumer
 .. automodule:: queue_manager.tornado_consumer
    :members:
 
+PubsubConsumer
+================
+.. automodule:: queue_manager.pubsub_consumer
+   :members:
+
+PubsubPublisher
+================
+.. automodule:: queue_manager.pubsub_publisher
+   :members:
+
 ----
 
 Indices and tables

@@ -13,7 +13,10 @@
 """
 import logging
 
-import pika
+try:
+    import pika
+except ModuleNotFoundError:
+    raise ModuleNotFoundError("You need to install pika")
 
 logger = logging.getLogger(__name__)
 

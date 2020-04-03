@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+
 from setuptools import setup, find_packages
 
 __version__ = "1.9.0"
@@ -11,7 +12,7 @@ def read(fname):
 
 
 setup(
-    name="py-queue-manager",
+    name="queue-manager",
     version=__version__,
     description="Library to deal with RabbitMQ",
     long_description=read("README.rst"),
@@ -24,7 +25,12 @@ setup(
     include_package_data=True,
     license="MIT",
     platforms="any",
-    install_requires=["pika>=1"],
+    # package_dir={"queue_manager":"queue_manager"},
+    extras_require={
+        "rabbitmq": ["pika<2"],
+        "pubsub": ["google-cloud-pubsub<2"],
+    },
+    install_requires=[],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python :: 2.7",
