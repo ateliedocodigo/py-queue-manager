@@ -1,8 +1,6 @@
 -r requirements.txt
 bumpversion<1
-coverage<5
-nose<2
-PyTest<6
 flake8
+pytest-cov<3
 sphinx<3
 sphinx_rtd_theme<1
