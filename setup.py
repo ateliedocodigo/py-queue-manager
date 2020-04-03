@@ -12,7 +12,7 @@ def read(fname):
 
 
 setup(
-    name="py-queue-manager",
+    name="queue-manager",
     version=__version__,
     description="Library to deal with RabbitMQ",
     long_description=read("README.rst"),
