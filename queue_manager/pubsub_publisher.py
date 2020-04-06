@@ -8,6 +8,8 @@
 """
 import logging
 
+from . import QueuePublisher
+
 try:
     from google.api_core.exceptions import GoogleAPICallError
     from google.cloud import pubsub_v1
@@ -18,7 +20,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class PubsubPublisher:
+class PubsubPublisher(QueuePublisher):
     scope = 'https://www.googleapis.com/auth/pubsub'
 
     def __init__(self, project_id, service_account_file_path, topic_name="ping"):
@@ -67,9 +69,10 @@ class PubsubPublisher:
         logger.debug(f"Response from PubSub: {message_id}")
         return message_id
 
-    def publish_message(self, message):
+    def publish_message(self, message, message_properties=None):
+        message_properties = message_properties or {}
         if type(message) is not bytes:
             message = message.encode('utf-8')
         self.assert_topic(self.full_topic_name)
-        response = self.client.publish(self.full_topic_name, message)
+        response = self.client.publish(self.full_topic_name, message, **message_properties)
         return response.result(timeout=5000)
