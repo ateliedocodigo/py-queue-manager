@@ -12,6 +12,6 @@ else:
 @skipIf(not pubsub_installed, "Skipping cause google-cloud-pubsub is not installed")
 class TestPubsubPublisher(TestCase):
 
-    @patch("queue_manager.pubsub_consumer.Credentials", Mock())
+    @patch("queue_manager.pubsub_publisher.Credentials", Mock())
     def test_should_initialize(self):
         self.assertIsInstance(PubsubPublisher(None, None, None), PubsubPublisher)
