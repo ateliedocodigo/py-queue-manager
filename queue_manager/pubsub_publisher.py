@@ -28,7 +28,7 @@ class PubsubPublisher(QueuePublisher):
     scope = 'https://www.googleapis.com/auth/pubsub'
 
     def __init__(self, project_id, service_account_file_path, topic_name="ping"):
-        logger.debug('Init PubSubManager ...')
+        logger.debug('Init PubsubPublisher ...')
         self.project_id = project_id
         self.service_account_file_path = service_account_file_path
 
@@ -49,8 +49,9 @@ class PubsubPublisher(QueuePublisher):
         self._last_assertion[topic_name] = time()
         try:
             self.client = self.get_pubsub_client()
+            logger.debug('Getting topic %s', topic_name)
             self.client.get_topic(topic_name)
-            logger.debug('Ok, topic already exists %s', topic_name)
+            logger.debug('Nice, topic already exists %s', topic_name)
         except GoogleAPICallError as error:
             if error.code == 404:
                 logger.info('Topic doesnt exist, creating a new topic %s', topic_name)
