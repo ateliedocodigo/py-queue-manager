@@ -43,12 +43,13 @@ class PubsubPublisher(QueuePublisher):
         self.full_topic_name = full_topic_name
         self.topic_name_ping = topic_name_ping
 
+        self.client = self.setup_client()
+
     def assert_topic(self, topic_name):
         if time() - self._assertion_ttl < self._last_assertion[topic_name]:
             return
         self._last_assertion[topic_name] = time()
         try:
-            self.client = self.get_pubsub_client()
             logger.debug('Getting topic %s', topic_name)
             self.client.get_topic(topic_name)
             logger.debug('Nice, topic already exists %s', topic_name)
@@ -61,7 +62,7 @@ class PubsubPublisher(QueuePublisher):
                 logger.error('An error occurred while getting the topic %s, reason: %s', topic_name, error)
                 raise error
 
-    def get_pubsub_client(self):
+    def setup_client(self):
         credentials = Credentials.from_service_account_file(
             self.service_account_file_path,
             scopes=(self.scope,)
