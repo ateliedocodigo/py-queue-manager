@@ -7,6 +7,10 @@
     publisher.publish_message('hello')
 """
 import logging
+from collections import defaultdict
+from time import time
+
+from . import QueuePublisher
 
 try:
     from google.api_core.exceptions import GoogleAPICallError
@@ -18,11 +22,13 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class PubsubPublisher:
+class PubsubPublisher(QueuePublisher):
+    _last_assertion = defaultdict(int)
+    _assertion_ttl = 30
     scope = 'https://www.googleapis.com/auth/pubsub'
 
     def __init__(self, project_id, service_account_file_path, topic_name="ping"):
-        logger.debug('Init PubSubManager ...')
+        logger.debug('Init PubsubPublisher ...')
         self.project_id = project_id
         self.service_account_file_path = service_account_file_path
 
@@ -38,18 +44,21 @@ class PubsubPublisher:
         self.topic_name_ping = topic_name_ping
 
     def assert_topic(self, topic_name):
+        if time() - self._assertion_ttl < self._last_assertion[topic_name]:
+            return
+        self._last_assertion[topic_name] = time()
         try:
             self.client = self.get_pubsub_client()
+            logger.debug('Getting topic %s', topic_name)
             self.client.get_topic(topic_name)
+            logger.debug('Nice, topic already exists %s', topic_name)
         except GoogleAPICallError as error:
             if error.code == 404:
-                logger.info('Topic doesnt exist, creating a new topic {}'.format(topic_name))
+                logger.info('Topic doesnt exist, creating a new topic %s', topic_name)
                 self.client.create_topic(topic_name)
             else:
-                logger.error('An error occurred while getting the topic {topic_name}, reason: {error}'.format(
-                    topic_name=topic_name,
-                    error=error
-                ))
+                self._last_assertion[topic_name] = 0
+                logger.error('An error occurred while getting the topic %s, reason: %s', topic_name, error)
                 raise error
 
     def get_pubsub_client(self):
@@ -67,9 +76,10 @@ class PubsubPublisher:
         logger.debug(f"Response from PubSub: {message_id}")
         return message_id
 
-    def publish_message(self, message):
+    def publish_message(self, message, message_properties=None):
+        message_properties = message_properties or {}
         if type(message) is not bytes:
             message = message.encode('utf-8')
         self.assert_topic(self.full_topic_name)
-        response = self.client.publish(self.full_topic_name, message)
+        response = self.client.publish(self.full_topic_name, message, **message_properties)
         return response.result(timeout=5000)

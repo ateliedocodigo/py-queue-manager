@@ -14,6 +14,8 @@
 """
 from logging import getLogger
 
+from . import QueueConsumer
+
 try:
     import google
     from google.api_core.exceptions import GoogleAPICallError
@@ -25,7 +27,7 @@ except ModuleNotFoundError:
 logger = getLogger(__name__)
 
 
-class PubsubConsumer:
+class PubsubConsumer(QueueConsumer):
     scope = 'https://www.googleapis.com/auth/pubsub'
 
     def __init__(self, project_id, service_account_file_path, subscription_name, topic_name):
