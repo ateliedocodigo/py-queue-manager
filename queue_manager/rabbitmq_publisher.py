@@ -13,6 +13,8 @@
 """
 import logging
 
+from queue_manager import QueuePublisher
+
 try:
     import pika
 except ModuleNotFoundError:
@@ -21,7 +23,7 @@ except ModuleNotFoundError:
 logger = logging.getLogger(__name__)
 
 
-class RabbitMqPublisher:
+class RabbitMqPublisher(QueuePublisher):
     connection = None
 
     def __init__(self, amqp_urls, exchange=None, exchange_type=None,

@@ -24,6 +24,8 @@ import logging
 import sys
 from inspect import signature
 
+from queue_manager import QueueConsumer
+
 try:
     import pika
 except ModuleNotFoundError:
@@ -32,7 +34,7 @@ except ModuleNotFoundError:
 logger = logging.getLogger(__name__)
 
 
-class RabbitMqConsumer:
+class RabbitMqConsumer(QueueConsumer):
     callback = None
 
     def __init__(self, amqp_urls,
