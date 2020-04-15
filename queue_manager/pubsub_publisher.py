@@ -7,6 +7,8 @@
     publisher.publish_message('hello')
 """
 import logging
+from collections import defaultdict
+from time import time
 
 from . import QueuePublisher
 
@@ -21,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 
 class PubsubPublisher(QueuePublisher):
+    _last_assertion = defaultdict(int)
+    _assertion_ttl = 30
     scope = 'https://www.googleapis.com/auth/pubsub'
 
     def __init__(self, project_id, service_account_file_path, topic_name="ping"):
@@ -40,18 +44,20 @@ class PubsubPublisher(QueuePublisher):
         self.topic_name_ping = topic_name_ping
 
     def assert_topic(self, topic_name):
+        if time() - self._assertion_ttl < self._last_assertion[topic_name]:
+            return
+        self._last_assertion[topic_name] = time()
         try:
             self.client = self.get_pubsub_client()
             self.client.get_topic(topic_name)
+            logger.debug('Ok, topic already exists %s', topic_name)
         except GoogleAPICallError as error:
             if error.code == 404:
-                logger.info('Topic doesnt exist, creating a new topic {}'.format(topic_name))
+                logger.info('Topic doesnt exist, creating a new topic %s', topic_name)
                 self.client.create_topic(topic_name)
             else:
-                logger.error('An error occurred while getting the topic {topic_name}, reason: {error}'.format(
-                    topic_name=topic_name,
-                    error=error
-                ))
+                self._last_assertion[topic_name] = 0
+                logger.error('An error occurred while getting the topic %s, reason: %s', topic_name, error)
                 raise error
 
     def get_pubsub_client(self):
