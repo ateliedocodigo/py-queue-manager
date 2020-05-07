@@ -3,7 +3,7 @@ import os
 
 from setuptools import setup, find_packages
 
-__version__ = "1.11.1"
+__version__ = "1.12.0"
 __repo__ = "https://github.com/ateliedocodigo/py-queue-manager"
 
 
