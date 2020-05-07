@@ -7,7 +7,7 @@
     publisher.publish_message('hello')
 """
 import logging
-from collections import defaultdict
+from collections import Mapping, defaultdict
 from time import time
 
 from . import QueuePublisher
@@ -27,10 +27,10 @@ class PubsubPublisher(QueuePublisher):
     _assertion_ttl = 30
     scope = 'https://www.googleapis.com/auth/pubsub'
 
-    def __init__(self, project_id, service_account_file_path, topic_name="ping"):
+    def __init__(self, project_id, service_account, topic_name="ping"):
         logger.debug('Init PubsubPublisher ...')
         self.project_id = project_id
-        self.service_account_file_path = service_account_file_path
+        self.service_account = service_account
 
         full_topic_name = 'projects/{project_id}/topics/{topic}'.format(
             project_id=self.project_id,
@@ -62,11 +62,13 @@ class PubsubPublisher(QueuePublisher):
                 logger.error('An error occurred while getting the topic %s, reason: %s', topic_name, error)
                 raise error
 
+    def _get_credentials(self):
+        if isinstance(self.service_account, Mapping):
+            return Credentials.from_service_account_info(self.service_account, scopes=(self.scope,))
+        return Credentials.from_service_account_file(self.service_account, scopes=(self.scope,))
+
     def setup_client(self):
-        credentials = Credentials.from_service_account_file(
-            self.service_account_file_path,
-            scopes=(self.scope,)
-        )
+        credentials = self._get_credentials()
         publisher_client = pubsub_v1.PublisherClient(credentials=credentials)
         return publisher_client
 

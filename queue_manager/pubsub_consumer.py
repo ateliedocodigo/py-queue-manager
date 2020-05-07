@@ -12,6 +12,7 @@
     except KeyboardInterrupt:
         consumer.stop()
 """
+from collections.abc import Mapping
 from logging import getLogger
 
 from . import QueueConsumer
@@ -30,10 +31,10 @@ logger = getLogger(__name__)
 class PubsubConsumer(QueueConsumer):
     scope = 'https://www.googleapis.com/auth/pubsub'
 
-    def __init__(self, project_id, service_account_file_path, subscription_name, topic_name):
+    def __init__(self, project_id, service_account, subscription_name, topic_name):
         logger.info("Initializing PubSub consumer")
         self.project_id = project_id
-        self.service_account_file_path = service_account_file_path
+        self.service_account = service_account
         self.subscription_name = subscription_name
         self.topic_name = topic_name
         self.client = self.setup_client()
@@ -49,10 +50,13 @@ class PubsubConsumer(QueueConsumer):
             logger.info(f"Message acknowledged: {message.data}")
             message.ack()
 
+    def _get_credentials(self):
+        if isinstance(self.service_account, Mapping):
+            return Credentials.from_service_account_info(self.service_account, scopes=(self.scope,))
+        return Credentials.from_service_account_file(self.service_account, scopes=(self.scope,))
+
     def setup_client(self):
-        credentials = Credentials.from_service_account_file(
-            self.service_account_file_path, scopes=(self.scope,)
-        )
+        credentials = self._get_credentials()
         return pubsub.SubscriberClient(credentials=credentials)
 
     def start_listening(self, callback=print):
