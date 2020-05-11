@@ -22,6 +22,7 @@ try:
     from google.api_core.exceptions import GoogleAPICallError
     from google.cloud import pubsub
     from google.oauth2.service_account import Credentials
+    from google.cloud.pubsub_v1.types import FlowControl
 except ModuleNotFoundError:
     raise ModuleNotFoundError("You need to install google-cloud-pubsub")
 
@@ -30,6 +31,7 @@ logger = getLogger(__name__)
 
 class PubsubConsumer(QueueConsumer):
     scope = 'https://www.googleapis.com/auth/pubsub'
+    max_messages = 1
 
     def __init__(self, project_id, service_account, subscription_name, topic_name):
         logger.info("Initializing PubSub consumer")
@@ -71,7 +73,8 @@ class PubsubConsumer(QueueConsumer):
             self.client.create_subscription(self.subscription_path, topic_path)
             # create the subscription, if goes well continue, if not let the Exception throws
             logger.info('Subscription created successfully.')
-        self.client.subscribe(self.subscription_path, self.on_message)
+        self.client.subscribe(self.subscription_path, self.on_message,
+                              flow_control=FlowControl(max_messages=self.max_messages))
         logger.info("PubSub has connected successfully to the topic.")
         logger.info("Application is listening to the PubSub topic...")
 
