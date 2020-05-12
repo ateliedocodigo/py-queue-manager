@@ -7,7 +7,8 @@
     publisher.publish_message('hello')
 """
 import logging
-from collections import Mapping, defaultdict
+from collections import defaultdict
+from collections.abc import Mapping
 from time import time
 
 from . import QueuePublisher
