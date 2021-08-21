@@ -1,7 +1,7 @@
 py-queue-manager
 ================
 
-Library to deal with RabbitMQ
+Library to deal with RabbitMQ and Google PubSub
 
 Usage
 -----
@@ -34,7 +34,7 @@ RabbitMqPublisher class
 
     from queue_manager.rabbitmq_consumer import RabbitMqPublisher
 
-    producer = RabbitMqPublisher('amqp://username:password@hostname:port',
+    producer = RabbitMqPublisher('amqp://username:*****@hostname:port',
                                  'exchange', 'exchange_type', 'queue_name', 'routing_key')
 
     producer.publish_message('hello')
@@ -51,9 +51,9 @@ Inspired on: asynchronous_consumer_example_
 
 .. code:: python
 
-    single_url = 'amqp://username:password@hostname:port'
+    single_url = 'amqp://username:*****@hostname:port'
     # or multiple urls
-    multiple_urls = ('amqp://username:password@hostnameone:port', 'amqp://username:password@hostnametwo:port')
+    multiple_urls = ('amqp://username:*****@hostnameone:port', 'amqp://username:*****@hostnametwo:port')
     consumer = RabbitMqConsumer(single_url, queue='queue_name')
 
     try:
@@ -72,7 +72,7 @@ TornadoConsumer class
     from tornado.ioloop import IOLoop
     from queue_manager.tornado_consumer import TornadoConsumer
 
-    consumer = TornadoConsumer('amqp://username:password@hostname:port',
+    consumer = TornadoConsumer('amqp://username:*****@hostname:port',
                                'exchange', 'exchange_type', 'queue_name', 'routing_key')
 
 
