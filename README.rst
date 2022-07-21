@@ -1,6 +1,9 @@
 py-queue-manager
 ================
 
+.. image:: https://badge.fury.io/py/pyqueuemanager.svg
+    :target: https://badge.fury.io/py/pyqueuemanager
+
 Library to deal with RabbitMQ and Google PubSub
 
 Usage
